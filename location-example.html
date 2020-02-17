@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+  <html>
+    <head>
+      <meta charset="utf-8">
+      <title>IP lookup API</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <link href="http://fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+    	<link rel="stylesheet" href="skeleton.css">
+      <style>
+        #home .cycle-slideshow {width: 100%;}
+        #home .slide { transition: height 250ms ease-in-out; width: 100%; height: 300px; background-size: cover; background-position: center center;}
+        #home .slide a { position: absolute; color: white; text-decoration: none; padding: 20px 30px; display: inline-block; background-color: rgba(0,0,0,0.8); top: 0; left: 0; }
+        /* Larger than tablet */
+        @media (min-width: 750px) {
+          #home .slide {height: 480px;}
+        }
+      </style>
+      <script type="text/javascript" src="https://code.jquery.com/jquery-1.12.0.min.js"></script>
+      <script type="text/javascript" src="jquery.cycle2.min.js"></script>
+
+      <script>
+// calculations source: https://www.movable-type.co.uk/scripts/latlong.html
+/** Extend Number object with method to convert numeric degrees to radians */
+if (Number.prototype.toRadians === undefined) {
+    Number.prototype.toRadians = function() { return this * Math.PI / 180; };
+}
+
+/** Extend Number object with method to convert radians to numeric (signed) degrees */
+if (Number.prototype.toDegrees === undefined) {
+    Number.prototype.toDegrees = function() { return this * 180 / Math.PI; };
+}
+
+/**
+ * Creates a LatLon point on the earth's surface at the specified latitude / longitude.
+ *
+ * @constructor
+ * @param {number} lat - Latitude in degrees.
+ * @param {number} lon - Longitude in degrees.
+ *
+ * @example
+ *     var p1 = new LatLon(52.205, 0.119);
+ */
+function LatLon(lat, lon) {
+    // allow instantiation without 'new'
+    if (!(this instanceof LatLon)) return new LatLon(lat, lon);
+
+    this.lat = Number(lat);
+    this.lon = Number(lon);
+}
+
+/**
+ * Returns the distance from ‘this’ point to destination point (using haversine formula).
+ *
+ * @param   {LatLon} point - Latitude/longitude of destination point.
+ * @param   {number} [radius=6371e3] - (Mean) radius of earth (defaults to radius in metres).
+ * @returns {number} Distance between this point and destination point, in same units as radius.
+ *
+ * @example
+ *     var p1 = new LatLon(52.205, 0.119);
+ *     var p2 = new LatLon(48.857, 2.351);
+ *     var d = p1.distanceTo(p2); // 404.3 km
+ */
+LatLon.prototype.distanceTo = function(point, radius) {
+    if (!(point instanceof LatLon)) throw new TypeError('point is not LatLon object');
+    radius = (radius === undefined) ? 6371e3 : Number(radius);
+
+    var R = radius;
+    var φ1 = this.lat.toRadians(),  λ1 = this.lon.toRadians();
+    var φ2 = point.lat.toRadians(), λ2 = point.lon.toRadians();
+    var Δφ = φ2 - φ1;
+    var Δλ = λ2 - λ1;
+
+    var a = Math.sin(Δφ/2) * Math.sin(Δφ/2)
+          + Math.cos(φ1) * Math.cos(φ2)
+          * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    var d = R * c;
+
+    return Math.ceil(d * 0.000621371); // value rounded up in miles
+};
+
+var tampa = new LatLon(27.9681, -82.4764);
+var stPete = new LatLon(27.7731, -82.6400);
+// var d = tampa.distanceTo(stPete); // 404.3 km
+
+// console.log(d);
+
+
+
+        var slides = [
+          {
+            "bgImage" : "http://cdn.visitstpeteclearwater.com/sites/all/themes/mmg_vspc/images/dev/live-amp-glow-panel.jpg",
+            "linkUrl" : "http://www.visitstpeteclearwater.com/live-amplified",
+            "textUpper" : "Get Your Glow On",
+            "textLower" : "Win Your Beach Getaway",
+            "textLink" : "Enter Now"
+          },
+          {
+            "bgImage" : "http://cdn.visitstpeteclearwater.com/sites/all/themes/mmg_vspc/images/dev/feb2016/dali-disney-2.jpg",
+            "linkUrl" : "http://www.visitstpeteclearwater.com/disney-dali",
+            "textUpper" : "DISCOVER DALI-DISNEY",
+            "textLower" : "ST. PETE EXHIBIT RUNS THROUGH JUNE 12",
+            "textLink" : "Learn More"
+          }
+        ];
+        var slides2 = [
+          {
+            "bgImage" : "http://cdn.visitstpeteclearwater.com/sites/default/master/files/vspc_uber_warm_up_hp_panel_0.jpg",
+            "linkUrl" : "http://www.visitstpeteclearwater.com/article/warm-up-wednesdays",
+            "textUpper" : "Warm Up Wednesdays",
+            "textLower" : "And Win a Florida Vacation!",
+            "textLink" : "Learn More"
+          },
+          {
+            "bgImage" : "http://cdn.visitstpeteclearwater.com/sites/default/master/files/yeti_panel.jpg",
+            "linkUrl" : "http://www.visitstpeteclearwater.com/yeti-loves-sun",
+            "textUpper" : "Head South",
+            "textLower" : "Where Winter Isn’t Abominable",
+            "textLink" : "Get Florida Vacation Ideas from Yeti"
+          }
+        ];
+
+        /*
+         * Check first if in the State, then check if in the city
+         */
+        var milesState;
+        var milesLoc;
+        var inMarketLocations = ['Tampa', 'Saint Petersburg', 'St. Pete Beach', 'Clearwater', 'Clearwater Beach', 'Largo', 'Pinellas Park', 'Palm Harbor'];
+
+        /*
+         * Return markup for a single slide
+         */
+        var createSlideMarkup = function(i, e) {
+          var slide = '<div class="slide" style="background-image: url(' + e.bgImage + ');">'
+            + '<div class="caption white"><div class="inner">'
+            + '<a data-track-category="Homepage" data-track-action="click" data-track-label="' + e.textLink +' - ' + e.linkUrl + '" href="' + e.linkUrl + '" class="text">'
+            + '<div class="upper">' + e.textUpper + '</div>'
+            + '<div class="lower">' + e.textLower + '</div>'
+            + '<div class="link"><div>' + e.textLink + ' <i class="fa fa-arrow-circle-right"></i></div></div>'
+            + '</a></div></div></div>';
+          return slide;
+        };
+
+        /*
+         * Get markup for all slides in a campaign. Remove first existing slide and add new slides to running show.
+         * @param {json} response
+         */
+        var getCampaignSlides = function(response) {
+
+          milesState = response.region;
+          milesLoc = response.loc.split(',');
+          milesLoc = new LatLon(milesLoc[0], milesLoc[1]);
+          var theseSlides = [];
+
+console.log(milesLoc);
+
+          switch (milesState) {
+            case 'Florida':
+//              if ( jQuery.inArray( response.city, inMarketLocations ) > -1 ) {
+              if ( milesLoc.distanceTo(stPete) < 75 ) {
+                var $html = jQuery('<p />', {text: 'Welcome, you are in the Tampa Bay area! This page thinks you are in ' + response.city + ' ' + response.loc + ' you are ' + milesLoc.distanceTo(stPete) + ' miles from St. Pete'});
+                jQuery("#target").append($html);
+
+                // remove the first slide
+                jQuery('#home .cycle-slideshow').cycle('remove', 0);
+                // load the slides and add to show
+                 jQuery.each(slides, function(i, e) {
+                    theseSlides[i] = createSlideMarkup(i, e);
+                 });
+
+                // // insert somethign completely different!!!
+                // var newContent = '<div class="slide"><a href="#">Something different</a></div>';
+                // theseSlides.unshift(newContent);
+
+                jQuery('#home .cycle-slideshow').cycle('add', theseSlides);
+
+              }
+              else {
+                var $html = jQuery('<p />', {text: 'Welcome, you are in Florida but not in the Tampa Bay area. Or possibly using a data connection and the IP address is not where you actually are. =) This page thinks you are in ' + response.city + ' ' + response.loc + ' you are ' + milesLoc.distanceTo(stPete) + ' miles from St. Pete'});
+                jQuery("#target").append($html);
+
+                // remove the first slide
+                jQuery('#home .cycle-slideshow').cycle('remove', 0);
+                // load the slides and add to show
+                 jQuery.each(slides2, function(i, e) {
+                    theseSlides[i] = createSlideMarkup(i, e);
+                 });
+                jQuery('#home .cycle-slideshow').cycle('add', theseSlides);
+
+              }
+              break;
+            default:
+//              return; // don't do anything -- leave evergreen content
+              // test a message for now
+              var $html = jQuery('<p />', {text: 'Welcome, you are not in Florida. This page thinks you are in ' + response.city + ' ' + response.loc + ' you are ' + milesLoc.distanceTo(stPete) + ' miles from St. Pete'});
+              jQuery("#target").append($html);
+
+          }
+
+        };
+
+        jQuery(document).ready(function() {
+
+          jQuery.get('http://ipinfo.io', function(response) { getCampaignSlides(response); }, 'jsonp');
+
+        });
+      </script>
+
+    </head>
+    <body>
+    <section id="header">
+      <div class="container">
+        <div class="row remove-bottom">
+          <div class="sixteen columns">
+            <h1>IP lookup API</h1>
+          </div>
+        </div>
+        <div class="row">
+            <div class="eight columns">
+                <div id="target"></div>
+            </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="home">
+        <div class="cycle-slideshow"
+            data-cycle-slides="> .slide"
+            data-cycle-timeout="2500"
+            data-cycle-log="false"
+            data-cycle-pause-on-hover="false"
+            data-cycle-loader="false"
+        >
+            <div class="slide" style="background-image: url(http://cdn.visitstpeteclearwater.com/sites/all/themes/mmg_vspc/images/dev/beach2.jpg);">
+              <div class="caption white">
+                <div class="inner">
+                  <a data-track-category="Homepage" data-track-action="click" data-track-label="Go Now - http://www.visitstpeteclearwater.com/things-to-do/beaches" href="http://www.visitstpeteclearwater.com/things-to-do/beaches" class="text">
+                    <div class="upper">AMERICA'S <br />BEST BEACHES</div>
+                    <div class="lower">PICK YOUR PLACE IN THE SAND</div>
+                    <div class="link"><div>Go Now <i class="fa fa-arrow-circle-right"></i></div></div>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+        </div>  <!--cycle-slideshow-->
+    </section>
+
+    </body>
+  </html>
+
